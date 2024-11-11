@@ -36,6 +36,8 @@ package org.apache.hadoop.hive.metastore;
 
 import com.google.common.collect.Lists;
 import com.starrocks.connector.hadoop.HadoopExt;
+import com.starrocks.qe.ConnectContext;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.common.ValidTxnList;
 import org.apache.hadoop.hive.common.ValidWriteIdList;
@@ -559,6 +561,12 @@ public class HiveMetaStoreClient implements IMetaStoreClient, AutoCloseable {
                             if (ugi == null) {
                                 ugi = SecurityUtils.getUGI();
                             }
+                            String currentSessionUser = ConnectContext.get().getCurrentUserIdentity().getUser();
+                            if (currentSessionUser != null) {
+                                ugi = UserGroupInformation.
+                                    createProxyUser(currentSessionUser, ugi);
+                                }
+                            LOG.info("Setting user in metastore connection as : " + ugi.getUserName());
                             client.set_ugi(ugi.getUserName(), Arrays.asList(ugi.getGroupNames()));
                         } catch (LoginException e) {
                             LOG.warn("Failed to do login. set_ugi() is not successful, " +
