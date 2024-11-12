@@ -42,6 +42,7 @@ public class ExecuteAsExecutor {
 
         UserIdentity user = stmt.getToUser();
         ctx.setCurrentUserIdentity(user);
+        ctx.setThreadLocalInfo();
         ctx.setCurrentRoleIds(user);
 
         if (!user.isEphemeral()) {
