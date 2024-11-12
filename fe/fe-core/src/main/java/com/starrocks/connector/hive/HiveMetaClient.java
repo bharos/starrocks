@@ -131,10 +131,9 @@ public class HiveMetaClient {
         try {
             // Get the proxy handler
             Object proxyHandler = Proxy.getInvocationHandler(client);
-
             // Get the handler's class
             Class<?> handlerClass = proxyHandler.getClass();
-
+            LOG.info("Handler class: {}", handlerClass.getName());
             // List all fields of the handler's class
             Field[] fields = handlerClass.getDeclaredFields();
             for (Field field : fields) {
