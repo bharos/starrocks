@@ -37,6 +37,7 @@ package org.apache.hadoop.hive.metastore;
 import com.google.common.collect.Lists;
 import com.starrocks.connector.hadoop.HadoopExt;
 import com.starrocks.qe.ConnectContext;
+import com.starrocks.sql.ast.UserIdentity;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.common.ValidTxnList;
@@ -450,11 +451,23 @@ public class HiveMetaStoreClient implements IMetaStoreClient, AutoCloseable {
 
     public void setUgiAsSessionUser()
         throws LoginException, IOException, TException {
-        String currentSessionUser = ConnectContext.get().getCurrentUserIdentity().getUser();
-        UserGroupInformation ugi = SecurityUtils.getUGI();
-        if (currentSessionUser != null) {
-            ugi = UserGroupInformation.createProxyUser(currentSessionUser, ugi);
+        ConnectContext ctx = ConnectContext.get();
+        if (ctx == null) {
+            LOG.error("ConnectContext is null, cannot set UGI as session user");
+            return;
         }
+        UserIdentity userIdentity = ctx.getCurrentUserIdentity();
+        if (userIdentity == null) {
+            LOG.error("UserIdentity is null, cannot set UGI as session user");
+            return;
+        }
+        String currentSessionUser = ConnectContext.get().getCurrentUserIdentity().getUser();
+        if (currentSessionUser == null) {
+            LOG.error("Current session user is null, cannot set UGI as session user");
+            return;
+        }
+        UserGroupInformation ugi = SecurityUtils.getUGI();
+        ugi = UserGroupInformation.createProxyUser(currentSessionUser, ugi);
         LOG.info("Setting user in metastore connection as : {}", ugi.getUserName());
         client.set_ugi(ugi.getUserName(), Arrays.asList(ugi.getGroupNames()));
     }
