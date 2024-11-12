@@ -127,6 +127,7 @@ public class HiveMetaClient {
     }
 
     public void setSessionUserFromProxy(IMetaStoreClient client) {
+        LOG.info("Set session user from proxy.");
         try {
             // Get the proxy handler
             Object proxyHandler = Proxy.getInvocationHandler(client);
@@ -137,11 +138,11 @@ public class HiveMetaClient {
             // List all fields of the handler's class
             Field[] fields = handlerClass.getDeclaredFields();
             for (Field field : fields) {
-                System.out.println("Field: " + field.getName());
+                LOG.info("Field: " + field.getName());
 
                 // Check if this field contains the target object (HiveMetaStoreClient)
                 if (field.getType().equals(HiveMetaStoreClient.class)) {
-                    System.out.println("Found field: " + field.getName());
+                    LOG.info("Found field: " + field.getName());
 
                     // Access the field and get the HiveMetaStoreClient instance
                     field.setAccessible(true);
@@ -153,7 +154,7 @@ public class HiveMetaClient {
                 }
             }
 
-            System.out.println("Target field not found in handler.");
+            LOG.info("Target field not found in handler.");
 
         } catch (Exception e) {
             LOG.error("Failed to access the underlying HiveMetaStoreClient", e);
@@ -178,6 +179,7 @@ public class HiveMetaClient {
             if (client == null) {
                 client = new RecyclableClient(conf);
             }
+            LOG.info("Get a client from the pool, current pool size: {}", clientPool.size());
             setSessionUserFromProxy(client.hiveClient);
             return client;
         }
