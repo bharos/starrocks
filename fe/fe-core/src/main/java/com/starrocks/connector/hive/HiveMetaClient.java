@@ -40,7 +40,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.thrift.transport.TTransportException;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -124,6 +126,40 @@ public class HiveMetaClient {
         return clientPool.size();
     }
 
+    public void setSessionUserFromProxy(IMetaStoreClient client) {
+        try {
+            // Get the proxy handler
+            Object proxyHandler = Proxy.getInvocationHandler(client);
+
+            // Get the handler's class
+            Class<?> handlerClass = proxyHandler.getClass();
+
+            // List all fields of the handler's class
+            Field[] fields = handlerClass.getDeclaredFields();
+            for (Field field : fields) {
+                System.out.println("Field: " + field.getName());
+
+                // Check if this field contains the target object (HiveMetaStoreClient)
+                if (field.getType().equals(HiveMetaStoreClient.class)) {
+                    System.out.println("Found field: " + field.getName());
+
+                    // Access the field and get the HiveMetaStoreClient instance
+                    field.setAccessible(true);
+                    HiveMetaStoreClient hiveMetaStoreClient = (HiveMetaStoreClient) field.get(proxyHandler);
+
+                    // Call the method on the target client
+                    hiveMetaStoreClient.setUgiAsSessionUser();
+                    return;
+                }
+            }
+
+            System.out.println("Target field not found in handler.");
+
+        } catch (Exception e) {
+            LOG.error("Failed to access the underlying HiveMetaStoreClient", e);
+        }
+    }
+
     private RecyclableClient getClient() throws MetaException {
         // The MetaStoreClient c'tor relies on knowing the Hadoop version by asking
         // org.apache.hadoop.util.VersionInfo. The VersionInfo class relies on opening
@@ -140,10 +176,10 @@ public class HiveMetaClient {
             // Serialize client creation to defend against possible race conditions accessing
             // local Kerberos state
             if (client == null) {
-                return new RecyclableClient(conf);
-            } else {
-                return client;
+                client = new RecyclableClient(conf);
             }
+            setSessionUserFromProxy(client.hiveClient);
+            return client;
         }
     }
 

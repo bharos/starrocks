@@ -448,6 +448,17 @@ public class HiveMetaStoreClient implements IMetaStoreClient, AutoCloseable {
         });
     }
 
+    public void setUgiAsSessionUser()
+        throws LoginException, IOException, TException {
+        String currentSessionUser = ConnectContext.get().getCurrentUserIdentity().getUser();
+        UserGroupInformation ugi = SecurityUtils.getUGI();
+        if (currentSessionUser != null) {
+            ugi = UserGroupInformation.createProxyUser(currentSessionUser, ugi);
+        }
+        LOG.info("Setting user in metastore connection as : {}", ugi.getUserName());
+        client.set_ugi(ugi.getUserName(), Arrays.asList(ugi.getGroupNames()));
+    }
+
     private void openInternal() throws MetaException {
         isConnected = false;
         TTransportException tte = null;
@@ -561,11 +572,6 @@ public class HiveMetaStoreClient implements IMetaStoreClient, AutoCloseable {
                             if (ugi == null) {
                                 ugi = SecurityUtils.getUGI();
                             }
-                            String currentSessionUser = ConnectContext.get().getCurrentUserIdentity().getUser();
-                            if (currentSessionUser != null) {
-                                ugi = UserGroupInformation.
-                                    createProxyUser(currentSessionUser, ugi);
-                                }
                             LOG.info("Setting user in metastore connection as : " + ugi.getUserName());
                             client.set_ugi(ugi.getUserName(), Arrays.asList(ugi.getGroupNames()));
                         } catch (LoginException e) {
