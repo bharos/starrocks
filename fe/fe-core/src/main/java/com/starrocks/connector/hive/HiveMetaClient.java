@@ -61,7 +61,7 @@ public class HiveMetaClient {
     public static final String DLF_HIVE_METASTORE = "dlf";
     public static final String GLUE_HIVE_METASTORE = "glue";
     // Maximum number of idle metastore connections in the connection pool at any point.
-    private static final int MAX_HMS_CONNECTION_POOL_SIZE = 32;
+    private static final int MAX_HMS_CONNECTION_POOL_SIZE = Config.hive_meta_store_connection_pool_size;
 
     private final LinkedList<RecyclableClient> clientPool = new LinkedList<>();
     private final Object clientPoolLock = new Object();
@@ -82,6 +82,7 @@ public class HiveMetaClient {
         if (properties.containsKey(HIVE_METASTORE_URIS)) {
             conf.set(MetastoreConf.ConfVars.THRIFT_URIS.getHiveName(), properties.get(HIVE_METASTORE_URIS));
         }
+        LOG.info("MAX_HMS_CONNECTION_POOL_SIZE: {}", MAX_HMS_CONNECTION_POOL_SIZE);
         String hmsTimeout = properties.getOrDefault(HIVE_METASTORE_TIMEOUT, String.valueOf(Config.hive_meta_store_timeout_s));
         conf.set(MetastoreConf.ConfVars.CLIENT_SOCKET_TIMEOUT.getHiveName(), hmsTimeout);
         return new HiveMetaClient(conf);

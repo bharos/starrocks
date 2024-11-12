@@ -2253,6 +2253,14 @@ public class Config extends ConfigBase {
     public static long hive_meta_store_timeout_s = 10L;
 
     /**
+     * Hive Metastore Client connection pool number of connections.
+     * Should be non-negative.
+     * When this is set to 0, there will be no connection pooling and each connection will be closed after use.
+     */
+    @ConfField
+    public static int hive_meta_store_connection_pool_size = 32;
+
+    /**
      * If set to true, StarRocks will automatically synchronize hms metadata to the cache in fe.
      */
     @ConfField
