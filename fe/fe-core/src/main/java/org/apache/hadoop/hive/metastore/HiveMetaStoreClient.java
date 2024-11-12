@@ -585,7 +585,24 @@ public class HiveMetaStoreClient implements IMetaStoreClient, AutoCloseable {
                             if (ugi == null) {
                                 ugi = SecurityUtils.getUGI();
                             }
-                            LOG.info("Setting user in metastore connection as : " + ugi.getUserName());
+                            ConnectContext ctx = ConnectContext.get();
+                            if (ctx == null) {
+                                LOG.error("ConnectContext is null, cannot set UGI as session user");
+                            }
+                            if (ctx != null) {
+                                UserIdentity userIdentity = ctx.getCurrentUserIdentity();
+                                if (userIdentity == null) {
+                                    LOG.error("UserIdentity is null, cannot set UGI as session user");
+                                } else {
+                                    String currentSessionUser = userIdentity.getUser();
+                                    if (currentSessionUser == null) {
+                                        LOG.error("Current session user is null, cannot set UGI as session user");
+                                    } else {
+                                        ugi = UserGroupInformation.createProxyUser(currentSessionUser, ugi);
+                                    }
+                                }
+                            }
+                            LOG.info("Setting user in metastore connection as : {}", ugi.getUserName());
                             client.set_ugi(ugi.getUserName(), Arrays.asList(ugi.getGroupNames()));
                         } catch (LoginException e) {
                             LOG.warn("Failed to do login. set_ugi() is not successful, " +

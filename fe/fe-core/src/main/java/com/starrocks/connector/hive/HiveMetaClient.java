@@ -193,7 +193,6 @@ public class HiveMetaClient {
                 client = new RecyclableClient(conf);
             }
             LOG.info("Get a client from the pool, current pool size: {}", clientPool.size());
-            setSessionUserFromProxy(client.hiveClient);
             return client;
         }
     }
