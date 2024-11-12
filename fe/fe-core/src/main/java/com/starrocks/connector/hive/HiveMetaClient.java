@@ -129,36 +129,49 @@ public class HiveMetaClient {
     public void setSessionUserFromProxy(IMetaStoreClient client) {
         LOG.info("Set session user from proxy.");
         try {
-            // Get the proxy handler
+            // Step 1: Get the proxy's invocation handler
             Object proxyHandler = Proxy.getInvocationHandler(client);
-            // Get the handler's class
+
+            // Step 2: Get the handler's class (this is the proxy class)
             Class<?> handlerClass = proxyHandler.getClass();
-            LOG.info("Handler class: {}", handlerClass.getName());
-            // List all fields of the handler's class
-            Field[] fields = handlerClass.getDeclaredFields();
-            for (Field field : fields) {
-                LOG.info("Field: " + field.getName());
 
-                // Check if this field contains the target object (HiveMetaStoreClient)
-                if (field.getType().equals(HiveMetaStoreClient.class)) {
-                    LOG.info("Found field: " + field.getName());
+            // Log handler class for debugging
+            LOG.info("Handler class: " + handlerClass.getName());
 
-                    // Access the field and get the HiveMetaStoreClient instance
-                    field.setAccessible(true);
-                    HiveMetaStoreClient hiveMetaStoreClient = (HiveMetaStoreClient) field.get(proxyHandler);
+            // Step 3: Check if the handler is of type RetryingMetaStoreClient
+            if (RetryingMetaStoreClient.class.isAssignableFrom(handlerClass)) {
+                LOG.info("Handler is of type RetryingMetaStoreClient.");
 
-                    // Call the method on the target client
-                    hiveMetaStoreClient.setUgiAsSessionUser();
-                    return;
+                // Step 4: Access the fields of the handler class
+                Field[] fields = handlerClass.getDeclaredFields();
+                for (Field field : fields) {
+                    LOG.info("Field: " + field.getName());
+
+                    // Check if the field is 'base' and of type IMetaStoreClient
+                    if (IMetaStoreClient.class.isAssignableFrom(field.getType()) && field.getName().equals("base")) {
+                        LOG.info("Found base field: " + field.getName());
+
+                        // Step 5: Access the field and get the IMetaStoreClient instance (which is likely HiveMetaStoreClient)
+                        field.setAccessible(true);
+                        Object fieldValue = field.get(proxyHandler);
+
+                        if (fieldValue instanceof HiveMetaStoreClient) {
+                            HiveMetaStoreClient hiveMetaStoreClient = (HiveMetaStoreClient) fieldValue;
+
+                            // Step 6: Call the setUgiAsSessionUser method
+                            hiveMetaStoreClient.setUgiAsSessionUser();
+                            return;
+                        }
+                    }
                 }
+            } else {
+                LOG.warn("Handler is not of type RetryingMetaStoreClient, found: " + handlerClass.getName());
             }
-
-            LOG.info("Target field not found in handler.");
-
         } catch (Exception e) {
             LOG.error("Failed to access the underlying HiveMetaStoreClient", e);
         }
     }
+
 
     private RecyclableClient getClient() throws MetaException {
         // The MetaStoreClient c'tor relies on knowing the Hadoop version by asking
